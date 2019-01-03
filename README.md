@@ -1,4 +1,4 @@
-# Script colleciton for the investigation of splice sites
+# Script collection for the investigation of splice sites
 
 These scripts provide functions to analyse splice sites based on a genome sequence (FASTA) and a corresponding annotation (GFF3) provided by the NCBI. Next, RNA-Seq reads can be mapped via STAR and the resulting BAM files can be converted into customized coverage files (COV) which are required for the validation of splice sites. The usage of individual splice sites can be quantified based on the number of mapped and propperly splitted RNA-Seq reads. These scripts generate report files and figures for the documentation of the analysis process.
 
