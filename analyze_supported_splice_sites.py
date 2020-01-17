@@ -5,8 +5,8 @@
 __usage__ = """
 					python analyze_supported_splice_sites.py
 					--data <FULL_PATH_TO_DATA_FOLDER>
-					--sssd <FULL_PATH_TO_RNA_SEQ_SUPPORT_FILES>
-					--cov_rep <FULL_PATH_TO_RNA_SEQ_COVERAGE_REPORT_FILE>
+					--sssd <FULL_PATH_TO_RNA_SEQ_SUPPORT_FILES> #path to all species (not one particular)
+					--cov_rep <FULL_PATH_TO_RNA_SEQ_COVERAGE_REPORT_FILE> #names have to be the same as in NCBI folder; RNA-Seq amount
 					--out <FULL_PATH_TO_OUTPUT_FOLDER>
 					"""
 
@@ -14,6 +14,7 @@ import glob, re, sys, os
 import matplotlib.pyplot as plt
 from scipy import stats
 import numpy as np
+import warnings
 
 # --- end of imports --- #
 
@@ -41,7 +42,7 @@ def generate_brief_overview( input_dir, output_file ):
 	"""! @brief generate overview based on top (non-canonical) splice sites """
 	
 	overview_files = glob.glob( input_dir + "*/*_overview.txt" )
-	
+	print(overview_files)
 	specs = []
 	gtags = []
 	gcags = []
@@ -63,6 +64,7 @@ def generate_brief_overview( input_dir, output_file ):
 		out.write( "GC-AG\t" + "\t".join( map( str, gcags ) ) + '\n' )
 		out.write( "AT-AC\t" + "\t".join( map( str, atacs ) ) + '\n' )
 		out.write( "others\t" + "\t".join( map( str, all_others ) ) + '\n' )
+
 
 
 def correlate_support_and_coverage( data_dir, splice_site_support_dir, cov_report_file, output_dir ):
@@ -165,13 +167,16 @@ def correlate_support_and_coverage( data_dir, splice_site_support_dir, cov_repor
 	y_values2 = []	#percentage
 	for spec in cov_per_spec.keys():
 		try:
-			y_values.append( supported_ncss_per_spec[ spec ] )
-			percent = (100.0*supported_ncss_per_spec[ spec ] ) / total_ncss_per_spec[ spec ] 
-			print spec + "\t" + str( percent ) + "%"
-			y_values2.append( percent )
-			x_values.append( cov_per_spec[ spec ] / 1000000000.0 )
+			try:
+				percent = (100.0*supported_ncss_per_spec[ spec ] ) / total_ncss_per_spec[ spec ] 
+				y_values.append( supported_ncss_per_spec[ spec ] )
+				print spec + "\t" + str( percent ) + "%"
+				y_values2.append( percent )
+				x_values.append( cov_per_spec[ spec ] / 1000000000.0 )
+			except ZeroDivisionError:
+				print spec + " ZeroDivisionError"	
 		except KeyError:
-			print spec
+			print spec + " KeyError"
 	
 	ax.scatter( x_values, y_values, color="green", label="counts" )
 	ax.scatter( [], [], color="blue", label="percent" )
@@ -192,7 +197,7 @@ def correlate_support_and_coverage( data_dir, splice_site_support_dir, cov_repor
 	plt.subplots_adjust( left=0.15, top=0.95, right=0.9, bottom=0.12 )
 	
 	fig.savefig( fig_file, dpi=300 )
-
+	
 
 def construct_overview_figure( overview_file, overview_figure ):
 	"""! @brief construct a figure to illustrate the ratio between differen splice site combinations """
@@ -225,10 +230,12 @@ def construct_overview_figure( overview_file, overview_figure ):
 	fig.savefig( overview_figure, dpi=300 )
 	plt.close('all')
 	
+	
 	print "GT-AG (median): " + str( 100*np.median( gtag ) )[:5] + "%"
 	print "GC-AG (median): " + str( 100*np.median( gcag ) )[:5] + "%"
 	print "AT-AC (median): " + str( 100*np.median( atac ) )[:5] + "%"
 	print "others (median): " + str( 100*np.median( others ) )[:5] + "%"
+	
 
 
 def construct_combined_file_with_splice_site_support( splice_site_support_dir, output_dir ):
@@ -238,7 +245,7 @@ def construct_combined_file_with_splice_site_support( splice_site_support_dir, o
 	
 	input_files = sorted( glob.glob( splice_site_support_dir + "*/splice_site_coverage_check.txt" ) )
 	with open( output_file, "w" ) as out:
-		out.write( "Species\tGeneID\tExon3prime\tIntron5prime\tIntron3prime\tExon5prime\t5prime_splice_site\t3pime_splice_site\n" )
+		out.write( "Species\tGeneID\tExon3prime\tIntron5prime\tIntron3prime\tExon5prime\t5prime_splice_site\t3prime_splice_site\n" )
 		for filename in input_files:
 			ID = filename.split('/')[-2]
 			with open( filename, "r" ) as f:
@@ -267,6 +274,7 @@ def main( arguments ):
 	overview_figure = output_dir + "overview.png"
 	construct_overview_figure( overview_file, overview_figure )
 	
+	
 	#analyze percentage of supported splice sites and correlate it with coverage
 	correlate_support_and_coverage( data_dir, splice_site_support_dir, cov_report_file, output_dir )
 	
@@ -280,4 +288,3 @@ if __name__ == "__main__":
 		main( sys.argv )
 	else:
 		sys.exit( __usage__ )
-	
